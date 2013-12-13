@@ -71,7 +71,7 @@ public class DubTask implements TaskType {
         // Plus the point is to generate artifacts, and we don't really want to generate artifacts for broken builds.
         // Then again, that may be a Bamboo setting, so should possibly allow it and let Bamboo handle it.
         if(runBuild) {
-            if(!testProcess.getHandler().succeeded())
+            if(testProcess != null && !testProcess.getHandler().succeeded())
                 taskContext.getBuildLogger().addErrorLogEntry("Skipping generating release because tests failed.");
             else {
                 buildProcess = runProcess(taskContext, BuildMode.release);
