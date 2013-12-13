@@ -30,6 +30,7 @@
         <configuration class="com.shardsoft.dubplug.DubConfigurator" />
         <resource type="freemarker" name="view" location="templates/viewDubTask.ftl"/>
         <resource type="freemarker" name="edit" location="templates/editDubTask.ftl"/>
+        <help link="dub.downloadLink" title="dub.downloadTitle"/>
     </taskType>
     
     <!-- import from the product container -->

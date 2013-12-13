@@ -17,6 +17,8 @@ import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -46,7 +48,6 @@ public class DubTask implements TaskType {
     @NotNull
     @Override
     public TaskResult execute(@NotNull TaskContext taskContext) throws TaskException {
-        final BuildLogger logger = taskContext.getBuildLogger();
         // TODO: Check dub describe for a dependency on tested.
         // Then if it's not there, ideally parse for an assertion error.
         // Or probably just parse for an assertion error and tested output at same time.
@@ -56,32 +57,66 @@ public class DubTask implements TaskType {
         // Except maybe not for executables... not sure...
         // And would need to specify local without changing system settings with add-local.
 
-        // First, run the unittests.
+        boolean runBuild = taskContext.getConfigurationMap().getAsBoolean(DubConfigurator.FIELD_DUB_RUN_BUILD);
+        boolean runTests = taskContext.getConfigurationMap().getAsBoolean(DubConfigurator.FIELD_DUB_RUN_TESTS);
+        boolean testsFailed = false;
+        TaskResultBuilder builder = TaskResultBuilder.newBuilder(taskContext);
+        ExternalProcess testProcess = null, buildProcess = null;
+        // First run the tests.
+        if(runTests) {
+            testProcess = runProcess(taskContext, BuildMode.test);
+            builder = builder.checkReturnCode(testProcess);
+        }
+        // Then run the build only if those succeed (otherwise report compilation errors multiple times, and wasteful).
+        // Plus the point is to generate artifacts, and we don't really want to generate artifacts for broken builds.
+        // Then again, that may be a Bamboo setting, so should possibly allow it and let Bamboo handle it.
+        if(runBuild) {
+            if(!testProcess.getHandler().succeeded())
+                taskContext.getBuildLogger().addErrorLogEntry("Skipping generating release because tests failed.");
+            else {
+                buildProcess = runProcess(taskContext, BuildMode.release);
+                builder = builder.checkReturnCode(buildProcess);
+            }
+        }
+        return builder.build();
+    }
+
+    private final ExternalProcess runProcess(@NotNull final TaskContext taskContext, BuildMode mode) {
+        final BuildLogger logger = taskContext.getBuildLogger();
+        logger.addBuildLogEntry("Preparing to run " + mode + " build.");
         StringOutputHandler outputHandler = new StringOutputHandler();
         StringOutputHandler errorHandler = new StringOutputHandler();
-        ExternalProcess dubProc = getProcess(taskContext, true, outputHandler, errorHandler);
+        Collection<String> args = getArgs(mode);
+        ExternalProcess dubProc = getProcess(taskContext, args, outputHandler, errorHandler);
         dubProc.execute();
+        String applicationOutput = outputHandler.getOutput();
+        logger.addBuildLogEntry("---Build Output---\r\n" + applicationOutput + "------------------");
         String errorOutput = errorHandler.getOutput();
         if(!Strings.isNullOrEmpty(errorOutput))
             logger.addErrorLogEntry(errorOutput);
-        // We want to still process tests even though dub did not return 0
-        // as if we had an assertion failure or such dub would return non-zero since the application does.
-        String applicationOutput = outputHandler.getOutput();
-        logger.addBuildLogEntry("Got application output of " + applicationOutput);
-        TestedTestReporter testReporter = new TestedTestReporter(applicationOutput, taskContext);
-        testCollationService.collateTestResults(taskContext, testReporter);
-        // If tests succeed (dub returned 0), then we can do a real build to generate the artifact.
-        ExternalProcess buildProc = getProcess(taskContext, false, null, null);
-        buildProc.execute();
-
-        return TaskResultBuilder.newBuilder(taskContext).checkReturnCode(dubProc).checkTestFailures().build();
+        if(mode == BuildMode.test) {
+            // We want to still process tests even though dub did not return 0
+            // as if we had an assertion failure or such dub would return non-zero since the application does.
+            TestedTestReporter testReporter = new TestedTestReporter(applicationOutput, taskContext);
+            testCollationService.collateTestResults(taskContext, testReporter);
+        } else {
+            // TODO: Do we need to do anything here for artifacts?
+        }
+        return dubProc;
     }
 
-    private ExternalProcess getProcess(@NotNull final TaskContext taskContext, boolean runTests, OutputHandler outputHandler, OutputHandler errorHandler) {
+    private Collection<String> getArgs(BuildMode mode) {
+        if(mode == BuildMode.release)
+            return Arrays.asList("build", "--build=release");
+        else
+            return Arrays.asList("test");
+    }
+
+    private ExternalProcess getProcess(@NotNull final TaskContext taskContext, Collection<String> args, OutputHandler outputHandler, OutputHandler errorHandler) {
         final String exePath = getExecutablePath(taskContext);
         List<String> commands = Lists.newArrayList(exePath);
-        if(runTests)
-            commands.add("test"); // Have dub run unittests.
+        if(args != null)
+            commands.addAll(args);
         String[] additionalArgs = null;
         String userArgs = taskContext.getConfigurationMap().get(DubConfigurator.FIELD_ADDITIONAL_OPTIONS);
         try {
@@ -90,10 +125,8 @@ public class DubTask implements TaskType {
         } catch (Exception e) {
             throw new RuntimeException("Invalid command line arguments for dub.");
         }
-        if(additionalArgs != null) {
-            for(String arg : additionalArgs)
-                commands.add(arg);
-        }
+        if(additionalArgs != null)
+            commands.addAll(Arrays.asList(additionalArgs));
         ExternalProcessBuilder builder = new ExternalProcessBuilder()
                 .command(commands, taskContext.getWorkingDirectory())
                 .handlers(outputHandler, errorHandler);
@@ -106,5 +139,10 @@ public class DubTask implements TaskType {
         final Capability capability = capabilityContext.getCapabilitySet().getCapability(DUB_CAPABILITY_PREFIX + "." + dubLabel);
         Preconditions.checkNotNull(capability, "Capability");
         return capability.getValueWithDefault();
+    }
+
+    private enum BuildMode {
+        test,
+        release
     }
 }
