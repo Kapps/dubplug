@@ -24,8 +24,18 @@ public class DubConfigurator extends AbstractTaskConfigurator implements BuildTa
     public static final String FIELD_ADDITIONAL_OPTIONS = "options";
     /** The field that specifies the label to use for the dub capability. */
     public static final String FIELD_DUB_LABEL = "label";
+    /** The field that indicates whether to create a release build. */
+    public static final String FIELD_DUB_RUN_BUILD = "runbuild";
+    /** The field that indicates whether to run unittests. */
+    public static final String FIELD_DUB_RUN_TESTS = "runtests";
 
-    private static final Set<String> FIELDS_TO_COPY = Sets.newHashSet(FIELD_ADDITIONAL_OPTIONS, FIELD_DUB_LABEL);
+    private static final Set<String> FIELDS_TO_COPY = Sets.newHashSet(
+            FIELD_ADDITIONAL_OPTIONS,
+            FIELD_DUB_LABEL,
+            FIELD_DUB_RUN_BUILD,
+            FIELD_DUB_RUN_TESTS
+    );
+
     private static final String UI_SUPPORT_FIELD = "uiConfigSupport";
 
     private final UIConfigSupport uiConfigSupport;
@@ -64,12 +74,18 @@ public class DubConfigurator extends AbstractTaskConfigurator implements BuildTa
         final String dubLabel = params.getString(FIELD_DUB_LABEL);
         if(StringUtils.isEmpty(dubLabel))
             errorCollection.addError(FIELD_DUB_LABEL, "The dub label must be set.");
+        final boolean runTests = params.getBoolean(FIELD_DUB_RUN_TESTS);
+        final boolean runBuild = params.getBoolean(FIELD_DUB_RUN_BUILD);
+        if(!runTests && !runBuild)
+            errorCollection.addError(FIELD_DUB_RUN_TESTS, "You must have either generating a build or running tests enabled.");
     }
 
     @Override
     public void populateContextForCreate(@NotNull final Map<String, Object> context) {
         super.populateContextForCreate(context);
         addSupport(context);
+        context.put(FIELD_DUB_RUN_BUILD, true);
+        context.put(FIELD_DUB_RUN_TESTS, true);
         context.put(FIELD_ADDITIONAL_OPTIONS, "");
     }
 
