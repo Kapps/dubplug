@@ -70,6 +70,9 @@ public class TestedTestReporter implements TestReportProvider {
                 String duration = matcher.group(4);
                 TestResults results = new TestResults(className, testName, duration);
                 results.setState(state);
+                // TODO: If we can use JSON as output and get the stack trace, that'd be nice.
+                if(matcher.groupCount() >= 5)
+                    results.setSystemOut(matcher.group(5));
                 if(state == TestState.SUCCESS)
                     tests.addSuccessfulTestResults(Arrays.asList(results));
                 else

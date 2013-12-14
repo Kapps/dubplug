@@ -99,8 +99,6 @@ public class DubTask implements TaskType {
             // as if we had an assertion failure or such dub would return non-zero since the application does.
             TestedTestReporter testReporter = new TestedTestReporter(applicationOutput, taskContext);
             testCollationService.collateTestResults(taskContext, testReporter);
-        } else {
-            // TODO: Do we need to do anything here for artifacts?
         }
         return dubProc;
     }
