@@ -23,6 +23,7 @@ public class TestedTestReporter implements TestReportProvider {
 
     private final String applicationOutput;
     private final Pattern linePattern;
+    private final Pattern unfriendlyNamePattern;
     private final TaskContext taskContext;
 
     /**
@@ -32,6 +33,7 @@ public class TestedTestReporter implements TestReportProvider {
     public TestedTestReporter(@NotNull String applicationOutput, @NotNull TaskContext taskContext) {
         this.applicationOutput = applicationOutput;
         this.linePattern = Pattern.compile("^(PASS|FAIL) \"(.*)\" \\((.+)\\) after (\\d\\.\\d+) s(?:(.+))?");
+        this.unfriendlyNamePattern = Pattern.compile("(?:.+\\.)?(.+)\\.__unittestL(\\d+)_(\\d+)");
         this.taskContext = taskContext;
     }
 
@@ -60,17 +62,22 @@ public class TestedTestReporter implements TestReportProvider {
                 String testName = matcher.group(2);
                 String unfriendlyName = matcher.group(3);
                 String className;
-                if(unfriendlyName.contains(".") && unfriendlyName.indexOf(".") != unfriendlyName.length() - 1) {
-                    className = unfriendlyName.substring(0, unfriendlyName.indexOf("."));
-                    unfriendlyName = unfriendlyName.substring(unfriendlyName.indexOf(".") + 1);
+                Matcher unfriendlyMatcher = Strings.isNullOrEmpty(unfriendlyName) ? null : unfriendlyNamePattern.matcher(unfriendlyName);
+                if(unfriendlyMatcher != null && unfriendlyMatcher.matches() && unfriendlyMatcher.groupCount() >= 3) {
+                    // Last part of name, start line number, test number.
+                    className = unfriendlyMatcher.group(1);
+                    String lineNumber = unfriendlyMatcher.group(2);
+                    String testNumber = unfriendlyMatcher.group(3);
+                    unfriendlyName = "Test " + testNumber + " (" + className + ":" + lineNumber + ")";
                 } else
-                    className = null;
+                    className = "Unknown";
                 if(Strings.isNullOrEmpty(testName))
                     testName = unfriendlyName;
                 String duration = matcher.group(4);
                 TestResults results = new TestResults(className, testName, duration);
                 results.setState(state);
-                // TODO: If we can use JSON as output and get the stack trace, that'd be nice.
+                // TODO: If we can use JSON as output and get the stack trace, that would be nice.
+                // Also, does setSystemOut actually do anything?
                 if(matcher.groupCount() >= 5)
                     results.setSystemOut(matcher.group(5));
                 if(state == TestState.SUCCESS)
