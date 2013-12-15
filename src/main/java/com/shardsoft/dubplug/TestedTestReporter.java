@@ -67,8 +67,7 @@ public class TestedTestReporter implements TestReportProvider {
                     // Last part of name, start line number, test number.
                     className = unfriendlyMatcher.group(1);
                     String lineNumber = unfriendlyMatcher.group(2);
-                    String testNumber = unfriendlyMatcher.group(3);
-                    unfriendlyName = "Test " + testNumber + " (" + className + ":" + lineNumber + ")";
+                    unfriendlyName = className + ":" + lineNumber;
                 } else
                     className = "Unknown";
                 if(Strings.isNullOrEmpty(testName))
