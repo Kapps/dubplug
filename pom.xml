@@ -14,8 +14,8 @@
         <url>https://shardsoft.com</url>
     </organization>
 
-    <name>dubplug</name>
-    <description>A plugin to provide builds and unittests for D through dub and tested.</description>
+    <name>D Support for Bamboo</name>
+    <description>A plugin to provide builds and unittests for D through dub (required) and tested (recommended).</description>
     <packaging>atlassian-plugin</packaging>
 
     <properties>
