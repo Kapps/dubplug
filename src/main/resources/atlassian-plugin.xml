@@ -26,11 +26,11 @@
         <category name="test" />
         <executable key="dub" nameKey="builder.dub.executableName" pathHelpKey="builder.dub.helpPath" />
         <capabilityDefaultsHelper class="com.shardsoft.dubplug.DubCapabilityDefaultsProvider" />
-        <description>Builds and tests a D project using dub. Including tested as a dependency is required for viewing test data.</description>
+        <description>Builds and tests a D project using dub and tested.</description>
         <configuration class="com.shardsoft.dubplug.DubConfigurator" />
         <resource type="freemarker" name="view" location="templates/viewDubTask.ftl"/>
         <resource type="freemarker" name="edit" location="templates/editDubTask.ftl"/>
-        <resource type="icon" name="icon" location="images/pluginIcon.png"/>
+        <resource type="icon" name="icon" location="icon.png"/>
         <help link="dub.downloadLink" title="dub.downloadTitle"/>
     </taskType>
     
