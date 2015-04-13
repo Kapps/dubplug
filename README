@@ -1,4 +1,0 @@
-Provides a task to build and execute unittests through dub.
-Tests may be run directly or through tested to provide more details.
-It is recommended to use tested as the default unittest runner does not provide enough information,
-such as what tests are being run and how long each test takes.
